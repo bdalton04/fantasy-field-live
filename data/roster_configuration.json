@@ -1,0 +1,24 @@
+{
+"my_team": {
+"J.BURROW": "QB",
+"J.JACOBS": "RB",
+"A.JONES": "RB",
+"M.NABERS": "WR",
+"C.OLAVE": "WR",
+"T.WARREN": "TE",
+"D.METCALF": "FLEX",
+"LAR DEF": "D/ST",
+"H.BUTKER": "K"
+},
+"opponent": {
+"J.HURTS": "QB",
+"D.HENRY": "RB",
+"C.MCCAFFREY": "RB",
+"A.BROWN": "WR",
+"J.JEFFERSON": "WR",
+"T.KELCE": "TE",
+"D.SAMUEL": "FLEX",
+"SF DEF": "D/ST",
+"J.TUCKER": "K"
+}
+}

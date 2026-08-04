@@ -1,0 +1,7 @@
+STREAMING_CHUNK:Ignoring environment files and caches...
+
+.env
+pycache/
+*.pyc
+.idea/
+.vscode/

@@ -1,0 +1,44 @@
+[
+{
+"text": "(15:00) J.Dart pass short right to M.Nabers for 15 yards.",
+"los": 25,
+"fantasy_team": "home",
+"defending_team": "PHI"
+},
+{
+"text": "(14:15) J.Hurts pass deep left to A.Brown for 40 yards.",
+"los": 20,
+"fantasy_team": "away",
+"defending_team": "NYG"
+},
+{
+"text": "(13:30) J.Jacobs up the middle for 25 yards.",
+"los": 40,
+"fantasy_team": "home",
+"defending_team": "SF"
+},
+{
+"text": "(12:45) J.Hurts sacked by K.Turner for -8 yards.",
+"los": 60,
+"fantasy_team": "away",
+"defending_team": "LAR"
+},
+{
+"text": "(11:10) J.Tucker 45 yard field goal is GOOD.",
+"los": 73,
+"fantasy_team": "away",
+"defending_team": "BAL"
+},
+{
+"text": "(10:05) J.Burrow pass deep middle to J.Chase for 35 yards, TOUCHDOWN.",
+"los": 65,
+"fantasy_team": "home",
+"defending_team": "SF"
+},
+{
+"text": "(08:20) D.Henry right tackle for 15 yards, TOUCHDOWN.",
+"los": 85,
+"fantasy_team": "away",
+"defending_team": "LAR"
+}
+]

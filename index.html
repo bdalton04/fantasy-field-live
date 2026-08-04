@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Fantasy Field</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0a0a0a; color: #ffffff; font-family: 'Inter', sans-serif; margin: 0; height: 100vh; display: flex; overflow: hidden; }
+
+        #left-sidebar { width: 280px; background-color: #141414; border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%); padding: 20px; position: relative; overflow: hidden; }
+        #right-sidebar { width: 320px; background-color: #141414; border-left: 1px solid #333; display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
+
+        .sidebar-header { padding: 15px; background-color: #1c1c1c; border-bottom: 2px solid #333; text-align: center; font-size: 18px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Oswald', sans-serif; flex-shrink: 0; }
+        .roster-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; gap: 15px; }
+        .team-section { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .team-title { font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #333; flex-shrink: 0; }
+        .players-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 5px; }
+
+        .roster-row { display: flex; justify-content: space-between; padding: 8px; border-radius: 4px; background: rgba(255,255,255,0.03); font-size: 13px; align-items: center; transition: background-color 0.4s ease; }
+        .my-team-row { border-left: 3px solid cyan; }
+        .opp-team-row { border-left: 3px solid #ef4444; }
+
+        .player-score { font-weight: 800; font-family: 'Oswald', sans-serif; font-size: 15px; transition: transform 0.3s ease, color 0.3s ease; }
+        .my-team-score-text { color: cyan; }
+        .opp-team-score-text { color: #ef4444; }
+
+        #scoreboard { width: 100%; max-width: 800px; background: #111; border-radius: 12px; padding: 15px 25px; border: 1px solid #333; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); flex-shrink: 0; }
+        .main-score { font-family: 'Oswald', sans-serif; font-size: 32px; font-weight: 700; line-height: 1; }
+
+        #tug-bar-container { width: 100%; height: 10px; background-color: #222; border-radius: 5px; position: relative; overflow: hidden; margin-top: 15px; }
+        #tug-my-team { height: 100%; background-color: cyan; width: 50%; float: left; transition: width 0.5s ease; }
+        #tug-opp-team { height: 100%; background-color: #ef4444; width: 50%; float: left; transition: width 0.5s ease; }
+        #tug-marker { width: 4px; height: 14px; background: white; position: absolute; left: 50%; top: -2px; transform: translateX(-50%); z-index: 2; transition: left 0.5s ease; box-shadow: 0 0 5px rgba(255,255,255,0.8); }
+
+        .canvas-container { position: relative; flex-grow: 1; width: 100%; display: flex; justify-content: center; align-items: center; min-height: 0; }
+        canvas {
+            background-color: #14361e;
+            border: 3px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            height: 100%;
+            width: auto;
+            max-height: 100%;
+            aspect-ratio: 550 / 960;
+        }
+
+        .log-entry { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="left-sidebar">
+        <div class="sidebar-header">Matchup</div>
+        <div class="roster-container">
+            <div class="team-section">
+                <div class="team-title text-cyan-400" id="my-team-header">MY TEAM</div>
+                <div id="my-team-players" class="players-list"></div>
+            </div>
+            <div class="team-section" style="border-top: 2px solid #222; padding-top: 15px;">
+                <div class="team-title text-red-500" id="opp-team-header">OPPONENT</div>
+                <div id="opp-team-players" class="players-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="scoreboard">
+            <div class="flex justify-between items-end">
+                <div class="text-left">
+                    <div class="text-xs text-gray-400 font-bold tracking-wider mb-1">MY TEAM</div>
+                    <div class="main-score text-cyan-400" id="my-total-score">0.00</div>
+                </div>
+                <div class="text-center pb-1">
+                    <div class="text-xs text-gray-500 tracking-widest uppercase font-bold">Tug of War</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-gray-400 font-bold tracking-wider mb-1">OPPONENT</div>
+                    <div class="main-score text-red-500" id="opp-total-score">0.00</div>
+                </div>
+            </div>
+            <div id="tug-bar-container">
+                <div id="tug-my-team"></div>
+                <div id="tug-opp-team"></div>
+                <div id="tug-marker"></div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="footballCanvas" width="550" height="960"></canvas>
+        </div>
+    </div>
+
+    <div id="right-sidebar">
+        <div class="sidebar-header">Live Play Log</div>
+        <div id="play-log" class="p-4 flex flex-col gap-3 overflow-y-auto" style="flex: 1;"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('footballCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const marginX = 35;
+        const endzoneY = 80;
+        const fieldWidth = canvas.width - (marginX * 2);
+        const fieldHeight = canvas.height - (endzoneY * 2);
+
+        let playsQueue = [];
+        let isAnimating = false;
+        let currentAnim = null;
+        let activePopups = [];
+        let confettiParticles = [];
+
+        let myTotalPoints = 0;
+        let oppTotalPoints = 0;
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/live-field`;
+
+        try {
+            const ws = new WebSocket(wsUrl);
+            ws.onopen = () => console.log("WebSocket Connected!");
+
+            ws.onmessage = (event) => {
+                const playData = JSON.parse(event.data);
+                playsQueue.push(playData);
+            };
+        } catch(e) {
+            console.error("Could not connect WebSocket (Are you in a preview window?)", e);
+        }
+
+        async function fetchInitialData() {
+            try {
+                const res = await fetch('/roster-state');
+                if (!res.ok) throw new Error("Server not returning roster state.");
+                const data = await res.json();
+
+                document.getElementById('my-team-header').innerText = (data.team_names && data.team_names.my_team) ? data.team_names.my_team : "MY TEAM";
+                document.getElementById('opp-team-header').innerText = (data.team_names && data.team_names.opponent) ? data.team_names.opponent : "OPPONENT";
+
+                const myContainer = document.getElementById('my-team-players');
+                const oppContainer = document.getElementById('opp-team-players');
+                myContainer.innerHTML = ''; oppContainer.innerHTML = '';
+
+                if (data.my_team) {
+                    data.my_team.forEach(p => {
+                        const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '');
+                        myContainer.innerHTML += `
+                            <div class="roster-row my-team-row" id="row-${safeId}">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 font-bold text-[10px] w-8">${p.pos || 'FLEX'}</span>
+                                    <span class="text-gray-300 font-semibold">${p.name}</span>
+                                </div>
+                                <span class="player-score my-team-score-text" id="score-${safeId}">${p.pts.toFixed(1)}</span>
+                            </div>`;
+                    });
+                }
+                if (data.opponent) {
+                    data.opponent.forEach(p => {
+                        const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '');
+                        oppContainer.innerHTML += `
+                            <div class="roster-row opp-team-row" id="row-${safeId}">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 font-bold text-[10px] w-8">${p.pos || 'FLEX'}</span>
+                                    <span class="text-gray-300 font-semibold">${p.name}</span>
+                                </div>
+                                <span class="player-score opp-team-score-text" id="score-${safeId}">${p.pts.toFixed(1)}</span>
+                            </div>`;
+                    });
+                }
+                if (data.totals) {
+                    myTotalPoints = data.totals.my_total || 0;
+                    oppTotalPoints = data.totals.opp_total || 0;
+                    updateScoreboardDOM();
+                }
+            } catch (e) {
+                console.warn("Init fetch failed or not connected to server yet.", e);
+            }
+        }
+
+        function updatePlayerScore(name, pointsToAdd, owner) {
+            const safeId = name.replace(/[^a-zA-Z0-9]/g, '');
+            const el = document.getElementById(`score-${safeId}`);
+            const rowEl = document.getElementById(`row-${safeId}`);
+
+            if (el && rowEl) {
+                const newScore = (parseFloat(el.innerText) || 0) + pointsToAdd;
+                el.innerText = newScore.toFixed(1);
+
+                // Trigger Text animation
+                el.style.color = 'white';
+                el.style.transform = 'scale(1.3)';
+
+                // Trigger Row Highlight
+                rowEl.style.backgroundColor = owner === 'my_team' ? 'rgba(0, 255, 255, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+
+                setTimeout(() => {
+                    el.style.color = '';
+                    el.style.transform = 'scale(1)';
+                    rowEl.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                }, 1200);
+            }
+        }
+
+        function updateScoreboardDOM() {
+            document.getElementById('my-total-score').innerText = myTotalPoints.toFixed(2);
+            document.getElementById('opp-total-score').innerText = oppTotalPoints.toFixed(2);
+            const total = myTotalPoints + oppTotalPoints;
+            let myPercentage = total > 0 ? (myTotalPoints / total) * 100 : 50;
+            document.getElementById('tug-my-team').style.width = `${myPercentage}%`;
+            document.getElementById('tug-opp-team').style.width = `${100 - myPercentage}%`;
+            document.getElementById('tug-marker').style.left = `${myPercentage}%`;
+        }
+
+        function spawnConfetti(x, y, teamColor) {
+            for(let i=0; i<75; i++) {
+                confettiParticles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 10 - 4, // Upward burst
+                    color: teamColor === 'my_team' ? (Math.random() > 0.4 ? 'cyan' : '#ffffff') : (Math.random() > 0.4 ? '#ef4444' : '#ffffff'),
+                    size: Math.random() * 5 + 3,
+                    life: 1.0,
+                    spin: Math.random() * 360
+                });
+            }
+        }
+
+        function drawField() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#14361e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'white'; ctx.lineWidth = 3;
+            ctx.strokeRect(marginX, endzoneY, fieldWidth, fieldHeight);
+
+            // Top Endzone (Opponent Territory - Red Tint)
+            ctx.fillStyle = '#1a0505';
+            ctx.fillRect(marginX, 0, fieldWidth, endzoneY);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+            ctx.font = 'bold 36px Oswald';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText("OPPONENT", canvas.width/2, endzoneY/2);
+
+            // Bottom Endzone (My Territory - Cyan Tint)
+            ctx.fillStyle = '#051a1a';
+            ctx.fillRect(marginX, canvas.height - endzoneY, fieldWidth, endzoneY);
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+            ctx.fillText("MY TEAM", canvas.width/2, canvas.height - endzoneY/2);
+
+            ctx.lineWidth = 1; ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Oswald';
+
+            // Yard lines
+            const yardSpacing = fieldHeight / 10;
+            for(let i=1; i<=9; i++) {
+                let y = endzoneY + (i * yardSpacing);
+                ctx.beginPath(); ctx.moveTo(marginX, y); ctx.lineTo(canvas.width - marginX, y);
+                ctx.strokeStyle = i === 5 ? '#ffd700' : 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = i === 5 ? 3 : 1; ctx.stroke();
+
+                let yardNum = i <= 5 ? i * 10 : (10 - i) * 10;
+                ctx.fillStyle = 'white';
+                ctx.fillText(yardNum, marginX - 18, y);
+                ctx.fillText(yardNum, canvas.width - marginX + 18, y);
+            }
+
+            // Draw Goalposts
+            function drawGoalPost(yPos, isTop) {
+                ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(canvas.width/2, yPos); ctx.lineTo(canvas.width/2, isTop ? yPos + 15 : yPos - 15); ctx.stroke();
+                const crossbarY = isTop ? yPos + 15 : yPos - 15;
+                ctx.beginPath(); ctx.moveTo(canvas.width/2 - 25, crossbarY); ctx.lineTo(canvas.width/2 + 25, crossbarY); ctx.stroke();
+                const uprightDir = isTop ? 25 : -25;
+                ctx.beginPath(); ctx.moveTo(canvas.width/2 - 25, crossbarY); ctx.lineTo(canvas.width/2 - 25, crossbarY + uprightDir); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(canvas.width/2 + 25, crossbarY); ctx.lineTo(canvas.width/2 + 25, crossbarY + uprightDir); ctx.stroke();
+            }
+            drawGoalPost(10, true);
+            drawGoalPost(canvas.height - 10, false);
+        }
+
+        function getCanvasCoords(percentX, yardlineY, isOpponentDrive) {
+            const mappedX = marginX + (percentX / 53.3) * fieldWidth;
+            let mappedY;
+
+            if (isOpponentDrive) {
+                // Opponents drive DOWN towards the bottom endzone (Y increases)
+                mappedY = endzoneY + ((yardlineY / 100) * fieldHeight);
+            } else {
+                // My Team drives UP towards the top endzone (Y decreases)
+                mappedY = (canvas.height - endzoneY) - ((yardlineY / 100) * fieldHeight);
+            }
+
+            return { x: mappedX || (canvas.width/2), y: mappedY };
+        }
+
+        function gameLoop() {
+            drawField();
+
+            // Render Confetti
+            for(let i = confettiParticles.length - 1; i >= 0; i--) {
+                let p = confettiParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.25; // Gravity
+                p.life -= 0.015; // Fade out speed
+
+                if(p.life <= 0) { confettiParticles.splice(i, 1); continue; }
+
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.spin * Math.PI / 180);
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                ctx.restore();
+                ctx.globalAlpha = 1.0;
+            }
+
+            if (isAnimating && currentAnim) {
+                const now = Date.now();
+
+                if (!currentAnim.finished) {
+                    let progress = Math.min((now - currentAnim.startTime) / currentAnim.duration, 1);
+                    let easeOut = 1 - Math.pow(1 - progress, 3);
+
+                    let currentX = currentAnim.startX + (currentAnim.endX - currentAnim.startX) * easeOut;
+                    let currentY = currentAnim.startY + (currentAnim.endY - currentAnim.startY) * easeOut;
+
+                    if (currentAnim.isPass) {
+                        let arcHeight = 40 + Math.abs(currentAnim.data.yards_gained);
+                        // Directional arc: always arc visually "upward" away from the turf
+                        currentY -= Math.sin(easeOut * Math.PI) * arcHeight;
+                    } else if (currentAnim.isFG) {
+                        currentY -= Math.sin(easeOut * Math.PI) * 160;
+                    } else if (currentAnim.isSack) {
+                        currentX += (Math.random() - 0.5) * 15 * (1-easeOut);
+                    }
+
+                    currentAnim.trail.push({x: currentX, y: currentY});
+                    currentAnim.currentX = currentX;
+                    currentAnim.currentY = currentY;
+
+                    if (progress >= 1) {
+                        currentAnim.finished = true;
+                        finishPlay(currentAnim);
+                        currentAnim.lingerUntil = Date.now() + 4000;
+                    }
+                }
+
+                if (currentAnim.trail.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(currentAnim.trail[0].x, currentAnim.trail[0].y);
+                    for(let pt of currentAnim.trail) { ctx.lineTo(pt.x, pt.y); }
+
+                    if (currentAnim.isFG) { ctx.strokeStyle = '#ffd700'; ctx.setLineDash([8, 8]); }
+                    else if (currentAnim.isPass) { ctx.strokeStyle = currentAnim.color; ctx.setLineDash([5, 5]); }
+                    else { ctx.strokeStyle = currentAnim.color; ctx.setLineDash([]); }
+
+                    ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
+                }
+
+                if (currentAnim.finished && currentAnim.isSack) {
+                    ctx.strokeStyle = 'red'; ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(currentAnim.currentX - 10, currentAnim.currentY - 10); ctx.lineTo(currentAnim.currentX + 10, currentAnim.currentY + 10);
+                    ctx.moveTo(currentAnim.currentX + 10, currentAnim.currentY - 10); ctx.lineTo(currentAnim.currentX - 10, currentAnim.currentY + 10);
+                    ctx.stroke();
+                } else if (!currentAnim.isFG || !currentAnim.finished) {
+                    ctx.beginPath(); ctx.arc(currentAnim.currentX, currentAnim.currentY, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = currentAnim.color; ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = 'white'; ctx.stroke();
+                }
+
+                if (currentAnim.finished && Date.now() > currentAnim.lingerUntil) {
+                    isAnimating = false;
+                    currentAnim = null;
+                }
+            } else if (playsQueue.length > 0) {
+                startNextPlay();
+            }
+
+            drawPopups();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startNextPlay() {
+            const play = playsQueue.shift();
+            isAnimating = true;
+
+            // 1. Log injection
+            const log = document.getElementById('play-log');
+            let borderColor = 'border-gray-600';
+            let bgStyle = 'bg-gray-900';
+            let playColor = '#aaaaaa';
+            let highestPts = 0;
+
+            // 2. Determine possession/direction
+            let isOpponentDrive = false;
+
+            play.scorers.forEach(s => {
+                if (s.owner === 'my_team') {
+                    if (s.points > highestPts) { playColor = 'cyan'; highestPts = s.points; }
+                } else if (s.owner === 'opponent') {
+                    isOpponentDrive = true; // Flag drive direction
+                    if (s.points > highestPts) { playColor = '#ef4444'; highestPts = s.points; }
+                }
+            });
+
+            if (play.scorers.some(s => s.owner === 'my_team')) { borderColor = 'border-cyan-400'; bgStyle = 'bg-cyan-900/20'; }
+            else if (isOpponentDrive) { borderColor = 'border-red-500'; bgStyle = 'bg-red-900/20'; }
+            else { borderColor = 'border-yellow-500'; }
+
+            log.innerHTML = `<div class="log-entry p-3 rounded text-sm text-gray-300 border-l-4 ${borderColor} ${bgStyle}">${play.raw_text}</div>` + log.innerHTML;
+
+            // 3. Compute directional coords
+            const startCoords = getCanvasCoords(26.6, play.line_of_scrimmage, isOpponentDrive);
+            const endCoords = getCanvasCoords(play.coordinates.x, play.coordinates.y, isOpponentDrive);
+
+            let animDuration = 1500 + (Math.abs(play.yards_gained) * 35);
+            if (play.play_type === 'field_goal') animDuration = 2500;
+            if (play.play_type === 'sack') animDuration = 1200;
+
+            currentAnim = {
+                data: play,
+                startX: startCoords.x, startY: startCoords.y,
+                endX: endCoords.x, endY: endCoords.y,
+                color: playColor,
+                isPass: play.play_type === 'pass',
+                isFG: play.play_type === 'field_goal' || play.play_type === 'pat',
+                isSack: play.play_type === 'sack',
+                startTime: Date.now(),
+                duration: animDuration,
+                finished: false,
+                trail: [],
+                currentX: startCoords.x,
+                currentY: startCoords.y
+            };
+        }
+
+        function finishPlay(animObj) {
+            let hasScoredTD = animObj.data.is_touchdown;
+            let scoringTeam = 'neutral';
+
+            animObj.data.scorers.forEach((scorer, index) => {
+                if (scorer.owner !== 'neutral') {
+                    scoringTeam = scorer.owner;
+
+                    // Pass the owner string to trigger the correct background color flash
+                    updatePlayerScore(scorer.name, scorer.points, scorer.owner);
+
+                    if (scorer.owner === 'my_team') myTotalPoints += scorer.points;
+                    if (scorer.owner === 'opponent') oppTotalPoints += scorer.points;
+
+                    activePopups.push({
+                        text: `${scorer.name} +${scorer.points}`,
+                        x: animObj.endX,
+                        y: animObj.endY - 20 - (index * 30),
+                        color: scorer.owner === 'my_team' ? 'cyan' : '#ef4444',
+                        life: 1.5
+                    });
+                }
+            });
+
+            if (hasScoredTD && scoringTeam !== 'neutral') {
+                spawnConfetti(animObj.endX, animObj.endY, scoringTeam);
+            }
+
+            updateScoreboardDOM();
+        }
+
+        function drawPopups() {
+            for (let i = activePopups.length - 1; i >= 0; i--) {
+                let p = activePopups[i];
+                p.y -= 0.15;
+                p.life -= 0.004;
+                const alpha = Math.min(1, p.life);
+
+                ctx.fillStyle = `rgba(15, 15, 15, ${alpha * 0.9})`;
+                ctx.font = 'bold 18px Inter';
+                const textWidth = ctx.measureText(p.text).width;
+
+                ctx.beginPath();
+                ctx.roundRect(p.x - textWidth/2 - 10, p.y - 22, textWidth + 20, 30, 6);
+                ctx.fill();
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = alpha;
+                ctx.textAlign = 'center';
+                ctx.fillText(p.text, p.x, p.y - 1);
+                ctx.globalAlpha = 1.0;
+
+                if (p.life <= 0) activePopups.splice(i, 1);
+            }
+        }
+
+        window.onload = () => {
+            fetchInitialData();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
