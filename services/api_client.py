@@ -7,7 +7,7 @@ class FantasyAPIClient:
         # Cookies are required for private leagues
         self.cookies = {"SWID": swid, "espn_s2": espn_s2}
 
-        # 🎭 The Disguise: Tell ESPN we are a normal Google Chrome web browser, not a Python bot
+        # Tell ESPN I am a normal Google Chrome web browser, not a Python bot
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json"
@@ -22,10 +22,10 @@ class FantasyAPIClient:
         Fetches the matchup containing my_team_id and returns team names and current total scores.
         """
         # follow_redirects=True is CRITICAL to bypass ESPN's internal 302 server redirects
-        # We also pass our disguise headers here!
+        # also pass disguise headers here
         async with httpx.AsyncClient(cookies=self.cookies, headers=self.headers, follow_redirects=True) as client:
             try:
-                # mMatchup gives us schedule and scores, mTeam gives us the actual Team Names
+                # mMatchup gives schedule and scores, mTeam gives the actual Team Names
                 params = {"view": ["mMatchup", "mTeam"], "scoringPeriodId": 1}
                 resp = await client.get(f"{self.fantasy_base_url}/{self.league_id}", params=params)
 
@@ -43,13 +43,13 @@ class FantasyAPIClient:
                 # 1. Build a dictionary of Team IDs to Team Names
                 team_names = {team["id"]: team.get("name", f"Team {team['id']}") for team in data.get("teams", [])}
 
-                # 2. Find your specific matchup in the schedule
+                # 2. Find my specific matchup in the schedule
                 for matchup in data.get("schedule", []):
                     home_id = matchup.get("home", {}).get("teamId")
                     away_id = matchup.get("away", {}).get("teamId")
 
                     if home_id == my_team_id or away_id == my_team_id:
-                        # Determine which one is you and which one is the opponent
+                        # Determine which one is me and which one is the opponent
                         my_info = matchup["home"] if home_id == my_team_id else matchup["away"]
                         opp_info = matchup["away"] if home_id == my_team_id else matchup["home"]
 
@@ -81,7 +81,7 @@ class FantasyAPIClient:
         }
 
     # =====================================================================
-    # 🏈 THE HOLY GRAIL: AUTO-ROSTER LOGIC (FULLY IMPLEMENTED)
+    # AUTO-ROSTER LOGIC (FULLY IMPLEMENTED)
     # =====================================================================
     async def get_starting_lineups(self, my_team_id: int, scoring_period: int = 1):
         """
@@ -128,7 +128,7 @@ class FantasyAPIClient:
         for entry in entries:
             slot_id = entry.get("lineupSlotId")
 
-            # ESPN Lineup Slots: 20 is Bench, 21 is IR. We only want active starters!
+            # ESPN Lineup Slots: 20 is Bench, 21 is IR. only want active starters
             if slot_id not in [20, 21]:
                 player_pool_entry = entry.get("playerPoolEntry", {}).get("player", {})
                 full_name = player_pool_entry.get("fullName", "")
@@ -145,9 +145,9 @@ class FantasyAPIClient:
 
         return starters
 
-    # =====================================================================
-    # 📡 THE LIVE NFL PLAY POLL (PUBLIC DATA)
-    # =====================================================================
+    #=======================================================#
+    # LIVE NFL PLAY POLL (PUBLIC DATA)
+   #========================================================#
     async def fetch_live_plays(self):
         """
         Polls the public ESPN NFL scoreboard for live play-by-play text across all active games.
@@ -187,7 +187,7 @@ class FantasyAPIClient:
                         live_plays.append({
                             "id": play_id,
                             "text": play_text,
-                            "los": 25,  # Defaulting to 25 if we can't parse the exact number
+                            "los": 25,  # Defaulting to 25 if can't parse the exact number
                             "defending_team": defending_team
                         })
 

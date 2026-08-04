@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse
 from typing import List
 from dotenv import load_dotenv
 
-# Load the secret variables from the .env file
 load_dotenv()
 
 from core.parser import PlayParser
@@ -125,7 +124,7 @@ async def serve_frontend(): return FileResponse("index.html")
 
 @app.get("/roster-state")
 async def get_roster_state():
-    matchup_data = await client.get_matchup_data(my_team_id=1)  # REPLACE THIS WITH YOUR TEAM ID
+    matchup_data = await client.get_matchup_data(my_team_id=1)  # REPLACE THIS WITH MY TEAM ID
 
     my_score = matchup_data["my_team"]["score"]
     opp_score = matchup_data["opp_team"]["score"]
