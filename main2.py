@@ -15,7 +15,7 @@ from services.api_client import FantasyAPIClient
 parser = PlayParser()
 
 # Change to False for the regular season!
-USE_MOCK_DATA = True
+USE_MOCK_DATA = False
 
 # --- GLOBAL STATE ---
 ROSTERS = {"my_team": {}, "opponent": {}}
@@ -124,10 +124,15 @@ async def serve_frontend(): return FileResponse("index.html")
 
 @app.get("/roster-state")
 async def get_roster_state():
-    matchup_data = await client.get_matchup_data(my_team_id=1)  # REPLACE THIS WITH MY TEAM ID
+    # 1. Fetch live scores and team names (Make sure my_team_id is set to your actual ID)
+    matchup_data = await client.get_matchup_data(my_team_id=6)
 
-    my_score = matchup_data["my_team"]["score"]
-    opp_score = matchup_data["opp_team"]["score"]
+    # 2. Fetch the active lineups with your custom PxP name formatting
+    roster_data = await client.get_starting_lineups(my_team_id=6)
+
+    # 3. Dynamically update the global state for the websocket router
+    ROSTERS["my_team"] = roster_data.get("my_team", {})
+    ROSTERS["opponent"] = roster_data.get("opponent", {})
 
     return {
         "team_names": {
@@ -136,7 +141,7 @@ async def get_roster_state():
         },
         "my_team": [{"name": p, "pos": pos, "pts": 0.0} for p, pos in ROSTERS["my_team"].items()],
         "opponent": [{"name": p, "pos": pos, "pts": 0.0} for p, pos in ROSTERS["opponent"].items()],
-        "totals": {"my_total": my_score, "opp_total": opp_score}
+        "totals": {"my_total": matchup_data["my_team"]["score"], "opp_total": matchup_data["opp_team"]["score"]}
     }
 
 
@@ -147,3 +152,6 @@ async def websocket_endpoint(websocket: WebSocket):
         while True: await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+#uvicorn main2:app --reload
+#http://localhost:8000
