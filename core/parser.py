@@ -6,7 +6,22 @@ class PlayParser:
         pass
 
     def _clean_name(self, name_str: str) -> str:
-        return name_str.replace(" ", "").upper()
+        # Strip trailing spaces and uppercase the string
+        name_str = name_str.strip().upper()
+
+        # 1. Remove all spaces
+        compressed = name_str.replace(" ", "")
+
+        # 2. Split by the period (e.g., ["A", "J", "BROWN"] or ["J", "HURTS"])
+        parts = compressed.split('.')
+
+        # 3. If there are multiple parts, rebuild it as JUST FirstInitial.LastName
+        if len(parts) >= 2:
+            first_initial = parts[0][0]
+            last_name = parts[-1]
+            return f"{first_initial}.{last_name}"
+
+        return compressed
 
     def parse_play(self, text: str, los: int, defending_team: str = None) -> dict:
         text_lower = text.lower()

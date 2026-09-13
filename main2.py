@@ -72,14 +72,23 @@ async def process_and_broadcast_play(text: str, play_id: str, is_home: bool = Tr
         parsed_data["fantasy_team"] = "home" if is_home else "away"
         parsed_data["line_of_scrimmage"] = los
         parsed_data["raw_text"] = text
+
+        # 1. Add a flag to track if the play matters to the matchup
+        is_relevant = False
+
         for scorer in parsed_data["scorers"]:
             if scorer["name"] in ROSTERS["my_team"]:
                 scorer["owner"] = "my_team"
+                is_relevant = True
             elif scorer["name"] in ROSTERS["opponent"]:
                 scorer["owner"] = "opponent"
+                is_relevant = True
             else:
                 scorer["owner"] = "neutral"
-        await manager.broadcast(parsed_data)
+
+        # 2. Only push the data to the web UI if it triggered the flag!
+        if is_relevant:
+            await manager.broadcast(parsed_data)
 
 
 async def broadcast_live_game():
@@ -124,26 +133,26 @@ async def serve_frontend(): return FileResponse("index.html")
 
 @app.get("/roster-state")
 async def get_roster_state():
-    # 1. Fetch live scores and team names (Make sure my_team_id is set to your actual ID)
     matchup_data = await client.get_matchup_data(my_team_id=6)
-
-    # 2. Fetch the active lineups with your custom PxP name formatting
     roster_data = await client.get_starting_lineups(my_team_id=6)
 
-    # 3. Dynamically update the global state for the websocket router
     ROSTERS["my_team"] = roster_data.get("my_team", {})
     ROSTERS["opponent"] = roster_data.get("opponent", {})
+
+    # FIX: Dynamically sum the actual live player points to bypass ESPN's team score lag!
+    my_real_total = sum([data.get("pts", 0.0) for name, data in ROSTERS["my_team"].items()])
+    opp_real_total = sum([data.get("pts", 0.0) for name, data in ROSTERS["opponent"].items()])
 
     return {
         "team_names": {
             "my_team": matchup_data["my_team"]["name"],
             "opponent": matchup_data["opp_team"]["name"]
         },
-        "my_team": [{"name": p, "pos": pos, "pts": 0.0} for p, pos in ROSTERS["my_team"].items()],
-        "opponent": [{"name": p, "pos": pos, "pts": 0.0} for p, pos in ROSTERS["opponent"].items()],
-        "totals": {"my_total": matchup_data["my_team"]["score"], "opp_total": matchup_data["opp_team"]["score"]}
+        "my_team": [{"name": name, "pos": data["pos"], "pts": data["pts"]} for name, data in ROSTERS["my_team"].items()],
+        "opponent": [{"name": name, "pos": data["pos"], "pts": data["pts"]} for name, data in ROSTERS["opponent"].items()],
+        # Send your instant calculations instead of the delayed ESPN total
+        "totals": {"my_total": my_real_total, "opp_total": opp_real_total}
     }
-
 
 @app.websocket("/ws/live-field")
 async def websocket_endpoint(websocket: WebSocket):

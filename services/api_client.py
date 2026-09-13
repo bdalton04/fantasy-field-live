@@ -10,7 +10,7 @@ class FantasyAPIClient:
             "Accept": "application/json"
         }
 
-        self.fantasy_base_url = "https://fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leagues"
+        self.fantasy_base_url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leagues"
         self.nfl_base_url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 
     async def get_matchup_data(self, my_team_id: int):
@@ -94,10 +94,20 @@ class FantasyAPIClient:
                     print("✅ Live rosters inactive (202). Fetching static Week 1 rosters...")
                     static_params = {"view": ["mRoster", "mMatchupScore"], "scoringPeriodId": scoring_period}
                     resp_static = await client.get(f"{self.fantasy_base_url}/{self.league_id}", params=static_params)
+
+                    # --- NEW DIAGNOSTICS: Catch the exact rejection reason ---
+                    print(f"🚨 STATIC ENDPOINT STATUS: {resp_static.status_code}")
+                    if resp_static.status_code != 200:
+                        print(f"🚨 ESPN REJECTED IT! Reason: {resp_static.reason_phrase}")
+                    # ---------------------------------------------------------
+
                     if resp_static.status_code == 200:
                         data = resp_static.json()
+                        print(f"🚨 RAW STATIC DATA PREVIEW: {str(data)[:200]}")
+
                 elif resp.status_code == 200:
                     data = resp.json()
+
                 else:
                     return {"my_team": {}, "opponent": {}}
 
@@ -136,12 +146,11 @@ class FantasyAPIClient:
 
     def _extract_starters(self, team_data: dict):
         starters = {}
-        pos_map = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "D/ST", 23: "FLEX"}
+        pos_map = {0: "QB", 2: "RB", 4: "WR", 6: "TE", 16: "D/ST", 17: "K", 23: "FLEX"}
 
         roster_node = team_data.get("rosterForCurrentScoringPeriod")
         entries = roster_node.get("entries", []) if roster_node else []
 
-        # FIX: Check for the empty list and fallback to base roster!
         if not entries:
             roster_node = team_data.get("roster", {})
             entries = roster_node.get("entries") or []
@@ -150,8 +159,12 @@ class FantasyAPIClient:
             slot_id = entry.get("lineupSlotId")
 
             if slot_id not in [20, 21]:
-                player_pool_entry = entry.get("playerPoolEntry", {}).get("player", {})
-                full_name = player_pool_entry.get("fullName", "")
+                player_pool_entry = entry.get("playerPoolEntry", {})
+                player_node = player_pool_entry.get("player", {})
+                full_name = player_node.get("fullName", "")
+
+                # FIX 1: Extract ESPN's official live point total for the player
+                points = player_pool_entry.get("appliedStatTotal", 0.0)
 
                 if full_name:
                     parts = full_name.split(" ")
@@ -160,7 +173,8 @@ class FantasyAPIClient:
                     else:
                         nfl_name = f"{parts[-1]} DEF".upper()
 
-                    starters[nfl_name] = pos_map.get(slot_id, "FLEX")
+                    # FIX 2: Store both the position AND the current points in a dictionary
+                    starters[nfl_name] = {"pos": pos_map.get(slot_id, "FLEX"), "pts": points}
 
         return starters
 

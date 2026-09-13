@@ -375,8 +375,10 @@
                 }
 
                 if (currentAnim.finished && Date.now() > currentAnim.lingerUntil) {
-                    isAnimating = false;
-                    currentAnim = null;
+                    // Check if a new play is waiting. If not, keep the current one on screen!
+                    if (playsQueue.length > 0) {
+                        startNextPlay();
+                    }
                 }
             } else if (playsQueue.length > 0) {
                 startNextPlay();
